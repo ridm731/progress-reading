@@ -164,7 +164,7 @@ export function ReadingWorkspace({ initialBooks }: ReadingWorkspaceProps) {
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {tab === "detail" ? "セッション詳細" : "AIフィードバック"}
+                {tab === "detail" ? "✏️ セッション詳細" : "🤖 AIフィードバック"}
               </button>
             ))}
           </div>

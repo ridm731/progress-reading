@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Library } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/primitives/StatusBadge";
 import { cn } from "@/lib/utils";
@@ -59,7 +59,9 @@ export function PaneBookshelf({ books, selectedBookId, onSelectBook, onAddBook }
       {/* ヘッダー */}
       <div className="border-b px-3 py-2">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">本棚</h2>
+          <h2 className="flex items-center gap-1.5 text-sm font-semibold tracking-wide uppercase text-muted-foreground">
+          <Library className="h-4 w-4" />本棚
+        </h2>
           <button
             onClick={onAddBook}
             className="flex h-6 w-6 items-center justify-center rounded-md hover:bg-accent"
@@ -115,12 +117,19 @@ export function PaneBookshelf({ books, selectedBookId, onSelectBook, onAddBook }
                   key={book.id}
                   onClick={() => onSelectBook(book.id)}
                   className={cn(
-                    "w-full rounded-md px-3 py-2 text-left transition-colors hover:bg-accent",
-                    selectedBookId === book.id && "bg-accent",
+                    "w-full rounded-md px-3 py-2 text-left transition-colors hover:bg-primary/10 hover:text-primary",
+                    selectedBookId === book.id
+                      ? "bg-primary/15 text-primary"
+                      : "",
                   )}
                 >
-                  <p className="text-sm font-medium leading-snug">{book.title}</p>
-                  <p className="text-xs text-muted-foreground">{book.author}</p>
+                  <p className="flex items-center gap-1.5 text-sm font-medium leading-snug">
+                    <span className="shrink-0">📘</span>
+                    {book.title}
+                  </p>
+                  <p className={cn("ml-5 text-xs", selectedBookId === book.id ? "text-primary/70" : "text-muted-foreground")}>
+                    {book.author}
+                  </p>
                 </button>
               ))}
             </div>

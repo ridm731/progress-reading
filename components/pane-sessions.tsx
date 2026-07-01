@@ -56,7 +56,9 @@ export function PaneSessions({
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-sm font-semibold">{book.title}</h2>
+          <h2 className="flex items-center gap-1.5 truncate text-sm font-semibold">
+            <span className="shrink-0">📘</span>{book.title}
+          </h2>
           <p className="text-xs text-muted-foreground">{book.author}</p>
         </div>
         <button
