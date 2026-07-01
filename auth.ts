@@ -6,15 +6,15 @@ import { db } from "@/db/client";
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(db),
   providers: [Google],
-  session: { strategy: "database" },
+  session: { strategy: "jwt" },
   callbacks: {
     signIn({ user }) {
       const allowed = process.env.ALLOWED_EMAIL;
       if (!allowed) throw new Error("ALLOWED_EMAIL is not set");
       return user.email === allowed;
     },
-    session({ session, user }) {
-      if (user) session.user.id = user.id;
+    session({ session, token }) {
+      if (token?.sub) session.user.id = token.sub;
       return session;
     },
   },
