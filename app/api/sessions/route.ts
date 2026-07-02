@@ -25,13 +25,18 @@ export async function POST(req: NextRequest) {
       })
       .returning();
 
+    let savedQuotes: (typeof quotes.$inferSelect)[] = [];
     if (quoteTexts && quoteTexts.length > 0) {
-      await db.insert(quotes).values(
-        quoteTexts.map((text: string) => ({ bookId, sessionId: session.id, text })),
-      );
+      savedQuotes = await db
+        .insert(quotes)
+        .values(quoteTexts.map((text: string) => ({ bookId, sessionId: session.id, text })))
+        .returning();
     }
 
-    return NextResponse.json({ success: true, sessionId: session.id }, { status: 201 });
+    return NextResponse.json(
+      { success: true, sessionId: session.id, session: { ...session, quotes: savedQuotes } },
+      { status: 201 },
+    );
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

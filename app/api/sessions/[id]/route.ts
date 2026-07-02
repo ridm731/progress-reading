@@ -12,7 +12,7 @@ export async function PATCH(
     const body = await req.json();
     const { progressType, progressFrom, progressTo, impression, quoteTexts, bookId } = body;
 
-    await db
+    const [session] = await db
       .update(readingSessions)
       .set({
         progressType: progressType ?? "page",
@@ -20,18 +20,21 @@ export async function PATCH(
         progressTo:   progressTo   ? String(progressTo)   : null,
         impression:   impression   ?? null,
       })
-      .where(eq(readingSessions.id, id));
+      .where(eq(readingSessions.id, id))
+      .returning();
 
+    let savedQuotes: (typeof quotes.$inferSelect)[] = [];
     if (quoteTexts !== undefined && bookId) {
       await db.delete(quotes).where(eq(quotes.sessionId, id));
       if (quoteTexts.length > 0) {
-        await db.insert(quotes).values(
-          quoteTexts.map((text: string) => ({ bookId, sessionId: id, text })),
-        );
+        savedQuotes = await db
+          .insert(quotes)
+          .values(quoteTexts.map((text: string) => ({ bookId, sessionId: id, text })))
+          .returning();
       }
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, session: { ...session, quotes: savedQuotes } });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

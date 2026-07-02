@@ -15,7 +15,7 @@ interface PaneSessionDetailProps {
   session:     SessionWithQuotes | null;
   isNew?:      boolean;
   onDelete?:   (sessionId: string) => void;
-  onSaved?:    (sessionId: string, isNew: boolean) => void;
+  onSaved?:    (session: SessionWithQuotes, isNew: boolean) => void;
 }
 
 const PROGRESS_TYPE_LABELS: Record<ProgressType, string> = {
@@ -81,7 +81,7 @@ export function PaneSessionDetail({ book, session, isNew, onDelete, onSaved }: P
           }),
         });
         const data = await res.json();
-        if (res.ok) onSaved?.(data.sessionId, true);
+        if (res.ok) onSaved?.(data.session, true);
         else alert("保存に失敗しました");
       } else if (session) {
         const res = await fetch(`/api/sessions/${session.id}`, {
@@ -96,7 +96,8 @@ export function PaneSessionDetail({ book, session, isNew, onDelete, onSaved }: P
             quoteTexts: quotes,
           }),
         });
-        if (res.ok) onSaved?.(session.id, false);
+        const data = await res.json();
+        if (res.ok) onSaved?.(data.session, false);
         else alert("保存に失敗しました");
       }
     } finally {
