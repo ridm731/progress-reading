@@ -65,6 +65,10 @@ export const books = pgTable("books", {
   coverUrl:   text("cover_url"),
   startedAt:  date("started_at"),
   finishedAt: date("finished_at"),
+  // 本に1つ持つAI生成テキスト（再生成で上書き）
+  aiRecap:            text("ai_recap"),
+  aiRecapGeneratedAt: timestamp("ai_recap_generated_at"),
+  aiReview:           text("ai_review"),
   createdAt:  timestamp("created_at").defaultNow().notNull(),
   updatedAt:  timestamp("updated_at").defaultNow().notNull()
               .$onUpdate(() => new Date()),

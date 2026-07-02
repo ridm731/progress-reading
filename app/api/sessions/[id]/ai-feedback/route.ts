@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/client";
-import { readingSessions } from "@/db/schema";
+import { books, readingSessions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 function buildPrompt(mode: string, impression: string | null, quotes: string[], allImpressions: string[]): string {
@@ -45,7 +45,7 @@ export async function POST(
   try {
     const { id } = await params;
     const body = await req.json();
-    const { mode, impression, quotes: quoteTexts, allImpressions } = body;
+    const { mode, bookId, impression, quotes: quoteTexts, allImpressions } = body;
 
     const prompt = buildPrompt(mode, impression, quoteTexts ?? [], allImpressions ?? []);
 
@@ -69,15 +69,27 @@ export async function POST(
     const geminiData = await geminiRes.json();
     const text: string = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
-    // today モードのみセッションに保存（recap/review はセッション横断なので保存しない）
+    // today はセッションに、recap / review は本に保存（いずれも再生成で上書き）
+    let generatedAt: Date | null = null;
     if (mode === "today" && id !== "book") {
       await db
         .update(readingSessions)
         .set({ aiFeedback: text })
         .where(eq(readingSessions.id, id));
+    } else if (mode === "recap" && bookId) {
+      generatedAt = new Date();
+      await db
+        .update(books)
+        .set({ aiRecap: text, aiRecapGeneratedAt: generatedAt })
+        .where(eq(books.id, bookId));
+    } else if (mode === "review" && bookId) {
+      await db
+        .update(books)
+        .set({ aiReview: text })
+        .where(eq(books.id, bookId));
     }
 
-    return NextResponse.json({ success: true, text });
+    return NextResponse.json({ success: true, text, generatedAt });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

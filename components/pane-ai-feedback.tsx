@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { AIResponseCard } from "@/components/primitives/AIResponseCard";
 import type { BookWithSessions, SessionWithQuotes, AIMode } from "@/lib/types";
@@ -14,6 +15,12 @@ interface PaneAiFeedbackProps {
   session:         SessionWithQuotes | null;
   allSessions:     SessionWithQuotes[];
   onFeedbackSaved?: (sessionId: string, text: string) => void;
+  onBookFeedbackSaved?: (
+    bookId: string,
+    mode: "recap" | "review",
+    text: string,
+    generatedAt: string | null,
+  ) => void;
 }
 
 const modeConfig: Record<AIMode, { label: string; description: string; icon: React.ReactNode }> = {
@@ -34,18 +41,26 @@ const modeConfig: Record<AIMode, { label: string; description: string; icon: Rea
   },
 };
 
-export function PaneAiFeedback({ book, session, allSessions, onFeedbackSaved }: PaneAiFeedbackProps) {
+export function PaneAiFeedback({
+  book,
+  session,
+  allSessions,
+  onFeedbackSaved,
+  onBookFeedbackSaved,
+}: PaneAiFeedbackProps) {
   const [mode,     setMode]     = useState<AIMode>("today");
   const [status,   setStatus]   = useState<FeedbackStatus>(session?.aiFeedback ? "done" : "idle");
   const [response, setResponse] = useState(session?.aiFeedback ?? "");
 
-  // 選択セッションが変わったら、保存済みの today フィードバックを表示し直す
+  // モード・本・セッションが変わったら、保存済みテキストを表示し直す
   useEffect(() => {
-    if (mode === "today") {
-      setResponse(session?.aiFeedback ?? "");
-      setStatus(session?.aiFeedback ? "done" : "idle");
-    }
-  }, [session?.id]);
+    const saved =
+      mode === "today" ? session?.aiFeedback :
+      mode === "recap" ? book?.aiRecap :
+                         book?.aiReview;
+    setResponse(saved ?? "");
+    setStatus(saved ? "done" : "idle");
+  }, [mode, book?.id, session?.id]);
 
   const handleRequest = async () => {
     if (allSessions.length === 0) {
@@ -65,6 +80,7 @@ export function PaneAiFeedback({ book, session, allSessions, onFeedbackSaved }: 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode,
+          bookId:          book?.id ?? null,
           impression:      session?.impression ?? null,
           quotes:          session?.quotes.map((q) => q.text) ?? [],
           allImpressions:  allSessions.map((s) => s.impression ?? "").filter(Boolean),
@@ -75,7 +91,11 @@ export function PaneAiFeedback({ book, session, allSessions, onFeedbackSaved }: 
       if (res.ok && data.text) {
         setResponse(data.text);
         setStatus("done");
-        if (mode === "today" && session) onFeedbackSaved?.(session.id, data.text);
+        if (mode === "today" && session) {
+          onFeedbackSaved?.(session.id, data.text);
+        } else if ((mode === "recap" || mode === "review") && book) {
+          onBookFeedbackSaved?.(book.id, mode, data.text, data.generatedAt ?? null);
+        }
       } else {
         setStatus("error");
       }
@@ -84,17 +104,8 @@ export function PaneAiFeedback({ book, session, allSessions, onFeedbackSaved }: 
     }
   };
 
-  const handleModeChange = (newMode: AIMode) => {
-    setMode(newMode);
-    setStatus("idle");
-    // today モードに切り替えた際、保存済みフィードバックがあれば表示
-    if (newMode === "today" && session?.aiFeedback) {
-      setResponse(session.aiFeedback);
-      setStatus("done");
-    } else {
-      setResponse("");
-    }
-  };
+  // 保存済みテキストの復元は useEffect（mode 依存）が行う
+  const handleModeChange = (newMode: AIMode) => setMode(newMode);
 
   if (!book) {
     return (
@@ -166,11 +177,18 @@ export function PaneAiFeedback({ book, session, allSessions, onFeedbackSaved }: 
             ボタンを押すとAIがフィードバックを生成します
           </p>
         ) : (
-          <AIResponseCard
-            status={status}
-            text={response}
-            onRetry={handleRequest}
-          />
+          <>
+            {mode === "recap" && status === "done" && book?.aiRecapGeneratedAt && (
+              <p className="mb-2 text-xs text-muted-foreground">
+                {format(new Date(book.aiRecapGeneratedAt), "M月d日 H:mm")}時点のおさらい
+              </p>
+            )}
+            <AIResponseCard
+              status={status}
+              text={response}
+              onRetry={handleRequest}
+            />
+          </>
         )}
       </div>
     </div>

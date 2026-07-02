@@ -32,7 +32,8 @@ type WorkspaceAction =
   | { type: "ADD_BOOK";        book: BookWithSessions }
   | { type: "DELETE_SESSION";  sessionId: string }
   | { type: "SESSION_SAVED";   session: SessionWithQuotes }
-  | { type: "AI_FEEDBACK_SAVED"; sessionId: string; text: string };
+  | { type: "AI_FEEDBACK_SAVED"; sessionId: string; text: string }
+  | { type: "BOOK_AI_SAVED"; bookId: string; mode: "recap" | "review"; text: string; generatedAt: string | null };
 
 function reducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
   switch (action.type) {
@@ -75,6 +76,15 @@ function reducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState
           s.id === action.sessionId ? { ...s, aiFeedback: action.text } : s,
         ),
       }));
+      return { ...state, books };
+    }
+    case "BOOK_AI_SAVED": {
+      const books = state.books.map((b) => {
+        if (b.id !== action.bookId) return b;
+        return action.mode === "recap"
+          ? { ...b, aiRecap: action.text, aiRecapGeneratedAt: action.generatedAt ? new Date(action.generatedAt) : new Date() }
+          : { ...b, aiReview: action.text };
+      });
       return { ...state, books };
     }
     default:
@@ -212,6 +222,9 @@ export function ReadingWorkspace({ initialBooks }: ReadingWorkspaceProps) {
                 onFeedbackSaved={(sessionId, text) =>
                   dispatch({ type: "AI_FEEDBACK_SAVED", sessionId, text })
                 }
+                onBookFeedbackSaved={(bookId, mode, text, generatedAt) =>
+                  dispatch({ type: "BOOK_AI_SAVED", bookId, mode, text, generatedAt })
+                }
               />
             </div>
           </div>
@@ -286,6 +299,9 @@ export function ReadingWorkspace({ initialBooks }: ReadingWorkspaceProps) {
               allSessions={bookSessions}
               onFeedbackSaved={(sessionId, text) =>
                 dispatch({ type: "AI_FEEDBACK_SAVED", sessionId, text })
+              }
+              onBookFeedbackSaved={(bookId, mode, text, generatedAt) =>
+                dispatch({ type: "BOOK_AI_SAVED", bookId, mode, text, generatedAt })
               }
             />
           </div>

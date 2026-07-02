@@ -19,6 +19,9 @@ export type Book = {
   coverUrl:    string | null;
   startedAt:   string | null; // DATE → string
   finishedAt:  string | null;
+  aiRecap:            string | null;
+  aiRecapGeneratedAt: Date | null;
+  aiReview:           string | null;
   createdAt:   Date;
   updatedAt:   Date;
 };
