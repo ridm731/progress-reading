@@ -15,7 +15,11 @@ interface PaneSessionDetailProps {
   session:     SessionWithQuotes | null;
   isNew?:      boolean;
   onDelete?:   (sessionId: string) => void;
-  onSaved?:    (session: SessionWithQuotes, isNew: boolean) => void;
+  onSaved?:    (
+    session: SessionWithQuotes,
+    isNew: boolean,
+    bookPatch?: { status: BookWithSessions["status"]; startedAt: string | null } | null,
+  ) => void;
 }
 
 const PROGRESS_TYPE_LABELS: Record<ProgressType, string> = {
@@ -73,6 +77,7 @@ export function PaneSessionDetail({ book, session, isNew, onDelete, onSaved }: P
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             bookId: book.id,
+            sessionDate: format(new Date(), "yyyy-MM-dd"), // ユーザーのタイムゾーンの今日
             progressType,
             progressFrom,
             progressTo,
@@ -81,7 +86,7 @@ export function PaneSessionDetail({ book, session, isNew, onDelete, onSaved }: P
           }),
         });
         const data = await res.json();
-        if (res.ok) onSaved?.(data.session, true);
+        if (res.ok) onSaved?.(data.session, true, data.bookPatch);
         else alert("保存に失敗しました");
       } else if (session) {
         const res = await fetch(`/api/sessions/${session.id}`, {

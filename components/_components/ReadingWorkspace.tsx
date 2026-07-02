@@ -31,7 +31,7 @@ type WorkspaceAction =
   | { type: "SET_PANE3_TAB";  tab: Pane3Tab }
   | { type: "ADD_BOOK";        book: BookWithSessions }
   | { type: "DELETE_SESSION";  sessionId: string }
-  | { type: "SESSION_SAVED";   session: SessionWithQuotes }
+  | { type: "SESSION_SAVED";   session: SessionWithQuotes; bookPatch?: { status: BookWithSessions["status"]; startedAt: string | null } | null }
   | { type: "AI_FEEDBACK_SAVED"; sessionId: string; text: string }
   | { type: "BOOK_AI_SAVED"; bookId: string; mode: "recap" | "review"; text: string; generatedAt: string | null };
 
@@ -57,11 +57,13 @@ function reducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState
     }
     case "SESSION_SAVED": {
       // 保存されたセッションを該当の本に反映（既存なら差し替え、新規なら先頭に追加）
+      // bookPatch があれば本のステータス変更（積読→読書中）も反映
       const books = state.books.map((b) => {
         if (b.id !== action.session.bookId) return b;
         const exists = b.sessions.some((s) => s.id === action.session.id);
         return {
           ...b,
+          ...(action.bookPatch ?? {}),
           sessions: exists
             ? b.sessions.map((s) => (s.id === action.session.id ? action.session : s))
             : [action.session, ...b.sessions],
@@ -211,7 +213,7 @@ export function ReadingWorkspace({ initialBooks }: ReadingWorkspaceProps) {
                 session={state.isNewSession ? null : selectedSession}
                 isNew={state.isNewSession}
                 onDelete={(id) => dispatch({ type: "DELETE_SESSION", sessionId: id })}
-                onSaved={(session) => dispatch({ type: "SESSION_SAVED", session })}
+                onSaved={(session, _isNew, bookPatch) => dispatch({ type: "SESSION_SAVED", session, bookPatch })}
               />
             </div>
             <div className={state.pane3Tab === "ai" ? "h-full" : "hidden"}>
@@ -289,7 +291,7 @@ export function ReadingWorkspace({ initialBooks }: ReadingWorkspaceProps) {
               session={state.isNewSession ? null : selectedSession}
               isNew={state.isNewSession}
               onDelete={(id) => dispatch({ type: "DELETE_SESSION", sessionId: id })}
-              onSaved={(session) => dispatch({ type: "SESSION_SAVED", session })}
+              onSaved={(session, _isNew, bookPatch) => dispatch({ type: "SESSION_SAVED", session, bookPatch })}
             />
           </div>
           <div className={mobilePane === "ai" ? "h-full" : "hidden"}>
