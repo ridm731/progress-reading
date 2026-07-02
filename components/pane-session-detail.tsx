@@ -246,9 +246,12 @@ export function PaneSessionDetail({ book, session, isNew, onDelete, onSaved }: P
         open={showDelete}
         title="セッションを削除しますか？"
         description="このセッションの感想と引用がすべて削除されます。この操作は取り消せません。"
-        onConfirm={() => {
+        onConfirm={async () => {
           setShowDelete(false);
-          if (session && onDelete) onDelete(session.id);
+          if (!session || !onDelete) return;
+          const res = await fetch(`/api/sessions/${session.id}`, { method: "DELETE" });
+          if (res.ok) onDelete(session.id);
+          else alert("削除に失敗しました");
         }}
         onCancel={() => setShowDelete(false)}
       />
