@@ -1,10 +1,11 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { books, readingSessions } from "@/db/schema";
+import { trimProgress } from "@/lib/utils";
 import type { BookWithSessions } from "@/lib/types";
 
 export async function getBooksForUser(userId: string): Promise<BookWithSessions[]> {
-  return db.query.books.findMany({
+  const result = await db.query.books.findMany({
     where: eq(books.userId, userId),
     orderBy: [desc(books.updatedAt)],
     with: {
@@ -14,4 +15,13 @@ export async function getBooksForUser(userId: string): Promise<BookWithSessions[
       },
     },
   });
+
+  return result.map((book) => ({
+    ...book,
+    sessions: book.sessions.map((s) => ({
+      ...s,
+      progressFrom: trimProgress(s.progressFrom),
+      progressTo:   trimProgress(s.progressTo),
+    })),
+  }));
 }

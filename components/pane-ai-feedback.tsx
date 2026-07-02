@@ -105,7 +105,7 @@ export function PaneAiFeedback({ book, session, allSessions }: PaneAiFeedbackPro
         <h2 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">
           AIフィードバック
         </h2>
-        <p className="text-xs text-muted-foreground">Gemini 2.0 Flash</p>
+        <p className="text-xs text-muted-foreground">Gemini 2.5 Flash</p>
       </div>
 
       {/* モード選択 */}

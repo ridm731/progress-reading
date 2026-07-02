@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/client";
 import { readingSessions, quotes } from "@/db/schema";
+import { trimProgress } from "@/lib/utils";
 import { format } from "date-fns";
 
 export async function POST(req: NextRequest) {
@@ -34,7 +35,16 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { success: true, sessionId: session.id, session: { ...session, quotes: savedQuotes } },
+      {
+        success: true,
+        sessionId: session.id,
+        session: {
+          ...session,
+          progressFrom: trimProgress(session.progressFrom),
+          progressTo:   trimProgress(session.progressTo),
+          quotes: savedQuotes,
+        },
+      },
       { status: 201 },
     );
   } catch (e) {

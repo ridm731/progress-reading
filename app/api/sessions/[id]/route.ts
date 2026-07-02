@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/client";
 import { readingSessions, quotes } from "@/db/schema";
+import { trimProgress } from "@/lib/utils";
 import { eq } from "drizzle-orm";
 
 export async function PATCH(
@@ -34,7 +35,15 @@ export async function PATCH(
       }
     }
 
-    return NextResponse.json({ success: true, session: { ...session, quotes: savedQuotes } });
+    return NextResponse.json({
+      success: true,
+      session: {
+        ...session,
+        progressFrom: trimProgress(session.progressFrom),
+        progressTo:   trimProgress(session.progressTo),
+        quotes: savedQuotes,
+      },
+    });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
