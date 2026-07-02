@@ -16,33 +16,39 @@ export function AddBookDialog({ open, onClose, onAdd }: AddBookDialogProps) {
   const [author, setAuthor] = useState("");
   const [medium, setMedium] = useState<BookMedium>("paper");
   const [pages, setPages]   = useState("");
+  const [saving, setSaving] = useState(false);
 
   if (!open) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !author.trim()) return;
 
-    const newBook: BookWithSessions = {
-      id:          crypto.randomUUID(),
-      userId:      "mock-user-1",
-      title:       title.trim(),
-      author:      author.trim(),
-      status:      "want_to_read",
-      medium,
-      totalPages:  pages ? parseInt(pages, 10) : null,
-      isbn:        null,
-      coverUrl:    null,
-      startedAt:   null,
-      finishedAt:  null,
-      createdAt:   new Date(),
-      updatedAt:   new Date(),
-      sessions:    [],
-    };
+    setSaving(true);
+    try {
+      const res = await fetch("/api/books", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title:      title.trim(),
+          author:     author.trim(),
+          medium,
+          totalPages: pages ? parseInt(pages, 10) : null,
+        }),
+      });
+      if (!res.ok) {
+        alert("本の追加に失敗しました");
+        return;
+      }
+      const data = await res.json();
+      const newBook: BookWithSessions = { ...data.book, sessions: [] };
 
-    onAdd(newBook);
-    setTitle(""); setAuthor(""); setMedium("paper"); setPages("");
-    onClose();
+      onAdd(newBook);
+      setTitle(""); setAuthor(""); setMedium("paper"); setPages("");
+      onClose();
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -102,8 +108,8 @@ export function AddBookDialog({ open, onClose, onAdd }: AddBookDialogProps) {
             <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
               キャンセル
             </Button>
-            <Button type="submit" className="flex-1" disabled={!title.trim() || !author.trim()}>
-              追加
+            <Button type="submit" className="flex-1" disabled={!title.trim() || !author.trim() || saving}>
+              {saving ? "追加中..." : "追加"}
             </Button>
           </div>
         </form>
