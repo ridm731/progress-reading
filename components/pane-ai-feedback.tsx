@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { AIResponseCard } from "@/components/primitives/AIResponseCard";
 import type { BookWithSessions, SessionWithQuotes, AIMode } from "@/lib/types";
@@ -10,9 +10,10 @@ import { cn } from "@/lib/utils";
 type FeedbackStatus = "idle" | "loading" | "done" | "error" | "empty";
 
 interface PaneAiFeedbackProps {
-  book:        BookWithSessions | null;
-  session:     SessionWithQuotes | null;
-  allSessions: SessionWithQuotes[];
+  book:            BookWithSessions | null;
+  session:         SessionWithQuotes | null;
+  allSessions:     SessionWithQuotes[];
+  onFeedbackSaved?: (sessionId: string, text: string) => void;
 }
 
 const modeConfig: Record<AIMode, { label: string; description: string; icon: React.ReactNode }> = {
@@ -33,13 +34,18 @@ const modeConfig: Record<AIMode, { label: string; description: string; icon: Rea
   },
 };
 
-export function PaneAiFeedback({ book, session, allSessions }: PaneAiFeedbackProps) {
+export function PaneAiFeedback({ book, session, allSessions, onFeedbackSaved }: PaneAiFeedbackProps) {
   const [mode,     setMode]     = useState<AIMode>("today");
-  const [status,   setStatus]   = useState<FeedbackStatus>("idle");
-  const [response, setResponse] = useState(() => {
-    // セッションに保存済みの today フィードバックを初期表示
-    return "";
-  });
+  const [status,   setStatus]   = useState<FeedbackStatus>(session?.aiFeedback ? "done" : "idle");
+  const [response, setResponse] = useState(session?.aiFeedback ?? "");
+
+  // 選択セッションが変わったら、保存済みの today フィードバックを表示し直す
+  useEffect(() => {
+    if (mode === "today") {
+      setResponse(session?.aiFeedback ?? "");
+      setStatus(session?.aiFeedback ? "done" : "idle");
+    }
+  }, [session?.id]);
 
   const handleRequest = async () => {
     if (allSessions.length === 0) {
@@ -69,6 +75,7 @@ export function PaneAiFeedback({ book, session, allSessions }: PaneAiFeedbackPro
       if (res.ok && data.text) {
         setResponse(data.text);
         setStatus("done");
+        if (mode === "today" && session) onFeedbackSaved?.(session.id, data.text);
       } else {
         setStatus("error");
       }

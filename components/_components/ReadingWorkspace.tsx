@@ -31,7 +31,8 @@ type WorkspaceAction =
   | { type: "SET_PANE3_TAB";  tab: Pane3Tab }
   | { type: "ADD_BOOK";        book: BookWithSessions }
   | { type: "DELETE_SESSION";  sessionId: string }
-  | { type: "SESSION_SAVED";   session: SessionWithQuotes };
+  | { type: "SESSION_SAVED";   session: SessionWithQuotes }
+  | { type: "AI_FEEDBACK_SAVED"; sessionId: string; text: string };
 
 function reducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
   switch (action.type) {
@@ -66,6 +67,15 @@ function reducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState
         };
       });
       return { ...state, books, selectedSessionId: action.session.id, isNewSession: false };
+    }
+    case "AI_FEEDBACK_SAVED": {
+      const books = state.books.map((b) => ({
+        ...b,
+        sessions: b.sessions.map((s) =>
+          s.id === action.sessionId ? { ...s, aiFeedback: action.text } : s,
+        ),
+      }));
+      return { ...state, books };
     }
     default:
       return state;
@@ -183,8 +193,9 @@ export function ReadingWorkspace({ initialBooks }: ReadingWorkspaceProps) {
               </button>
             ))}
           </div>
+          {/* タブ切替でコンポーネントを破棄すると生成結果が消えるため CSS で隠す */}
           <div className="flex-1 overflow-hidden">
-            {state.pane3Tab === "detail" ? (
+            <div className={state.pane3Tab === "detail" ? "h-full" : "hidden"}>
               <PaneSessionDetail
                 book={selectedBook}
                 session={state.isNewSession ? null : selectedSession}
@@ -192,13 +203,17 @@ export function ReadingWorkspace({ initialBooks }: ReadingWorkspaceProps) {
                 onDelete={(id) => dispatch({ type: "DELETE_SESSION", sessionId: id })}
                 onSaved={(session) => dispatch({ type: "SESSION_SAVED", session })}
               />
-            ) : (
+            </div>
+            <div className={state.pane3Tab === "ai" ? "h-full" : "hidden"}>
               <PaneAiFeedback
                 book={selectedBook}
                 session={selectedSession}
                 allSessions={bookSessions}
+                onFeedbackSaved={(sessionId, text) =>
+                  dispatch({ type: "AI_FEEDBACK_SAVED", sessionId, text })
+                }
               />
-            )}
+            </div>
           </div>
         </div>
       </div>
@@ -235,17 +250,17 @@ export function ReadingWorkspace({ initialBooks }: ReadingWorkspaceProps) {
           )}
         </div>
 
-        {/* ペイン本体 */}
+        {/* ペイン本体（切替で生成結果が消えないよう CSS で隠す） */}
         <div className="flex-1 overflow-hidden">
-          {mobilePane === "bookshelf" && (
+          <div className={mobilePane === "bookshelf" ? "h-full" : "hidden"}>
             <PaneBookshelf
               books={state.books}
               selectedBookId={state.selectedBookId}
               onSelectBook={handleSelectBook}
               onAddBook={() => setShowAddBook(true)}
             />
-          )}
-          {mobilePane === "sessions" && (
+          </div>
+          <div className={mobilePane === "sessions" ? "h-full" : "hidden"}>
             <PaneSessions
               book={selectedBook}
               sessions={bookSessions}
@@ -254,8 +269,8 @@ export function ReadingWorkspace({ initialBooks }: ReadingWorkspaceProps) {
               onNewSession={handleNewSession}
               onRequestAI={handleRequestAI}
             />
-          )}
-          {mobilePane === "detail" && (
+          </div>
+          <div className={mobilePane === "detail" ? "h-full" : "hidden"}>
             <PaneSessionDetail
               book={selectedBook}
               session={state.isNewSession ? null : selectedSession}
@@ -263,14 +278,17 @@ export function ReadingWorkspace({ initialBooks }: ReadingWorkspaceProps) {
               onDelete={(id) => dispatch({ type: "DELETE_SESSION", sessionId: id })}
               onSaved={(session) => dispatch({ type: "SESSION_SAVED", session })}
             />
-          )}
-          {mobilePane === "ai" && (
+          </div>
+          <div className={mobilePane === "ai" ? "h-full" : "hidden"}>
             <PaneAiFeedback
               book={selectedBook}
               session={selectedSession}
               allSessions={bookSessions}
+              onFeedbackSaved={(sessionId, text) =>
+                dispatch({ type: "AI_FEEDBACK_SAVED", sessionId, text })
+              }
             />
-          )}
+          </div>
         </div>
       </div>
 
