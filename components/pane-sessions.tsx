@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,8 @@ export function PaneSessions({
   onNewSession,
   onRequestAI,
 }: PaneSessionsProps) {
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
+
   if (!book) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -79,7 +82,17 @@ export function PaneSessions({
               前回（{format(new Date(lastSession.sessionDate), "M/d", { locale: ja })}）のまとめ
             </span>
           </div>
-          <p className="line-clamp-2 text-xs text-foreground/80">{lastSession.impression}</p>
+          <button
+            className="w-full text-left"
+            onClick={() => setSummaryExpanded((v) => !v)}
+          >
+            <p className={cn("text-xs text-foreground/80", !summaryExpanded && "line-clamp-2")}>
+              {lastSession.impression}
+            </p>
+            <span className="mt-0.5 text-xs text-muted-foreground underline-offset-2 hover:underline">
+              {summaryExpanded ? "閉じる" : "続きを見る"}
+            </span>
+          </button>
           {onRequestAI && (
             <Button variant="outline" size="sm" className="mt-2 h-6 text-xs" onClick={onRequestAI}>
               AIにおさらいを作ってもらう

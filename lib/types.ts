@@ -32,6 +32,7 @@ export type Session = {
   progressTo:   string | null;
   progressNote: string | null;
   impression:   string | null;
+  aiFeedback:   string | null;
   createdAt:    Date;
 };
 

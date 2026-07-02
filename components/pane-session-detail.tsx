@@ -11,10 +11,11 @@ import { Plus, Quote, Trash2, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface PaneSessionDetailProps {
-  book:      BookWithSessions | null;
-  session:   SessionWithQuotes | null;
-  isNew?:    boolean;
-  onDelete?: (sessionId: string) => void;
+  book:        BookWithSessions | null;
+  session:     SessionWithQuotes | null;
+  isNew?:      boolean;
+  onDelete?:   (sessionId: string) => void;
+  onSaved?:    (sessionId: string, isNew: boolean) => void;
 }
 
 const PROGRESS_TYPE_LABELS: Record<ProgressType, string> = {
@@ -24,7 +25,7 @@ const PROGRESS_TYPE_LABELS: Record<ProgressType, string> = {
   chapter:  "章",
 };
 
-export function PaneSessionDetail({ book, session, isNew, onDelete }: PaneSessionDetailProps) {
+export function PaneSessionDetail({ book, session, isNew, onDelete, onSaved }: PaneSessionDetailProps) {
   const [impression,    setImpression]    = useState(session?.impression ?? "");
   const [quotes,        setQuotes]        = useState<string[]>(session?.quotes.map((q) => q.text) ?? []);
   const [newQuote,      setNewQuote]      = useState("");
@@ -33,6 +34,7 @@ export function PaneSessionDetail({ book, session, isNew, onDelete }: PaneSessio
   const [progressType,  setProgressType]  = useState<ProgressType>(session?.progressType ?? (book?.medium === "kindle" ? "location" : "page"));
   const [showMenu,      setShowMenu]      = useState(false);
   const [showDelete,    setShowDelete]    = useState(false);
+  const [saving,        setSaving]        = useState(false);
 
   useEffect(() => {
     setImpression(session?.impression ?? "");
@@ -60,6 +62,47 @@ export function PaneSessionDetail({ book, session, isNew, onDelete }: PaneSessio
   const dateLabel = session
     ? format(new Date(session.sessionDate), "yyyy年M月d日（EEE）", { locale: ja })
     : format(new Date(), "yyyy年M月d日（EEE）", { locale: ja });
+
+  const handleSave = async () => {
+    if (!book) return;
+    setSaving(true);
+    try {
+      if (isNew) {
+        const res = await fetch("/api/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            bookId: book.id,
+            progressType,
+            progressFrom,
+            progressTo,
+            impression,
+            quoteTexts: quotes,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok) onSaved?.(data.sessionId, true);
+        else alert("保存に失敗しました");
+      } else if (session) {
+        const res = await fetch(`/api/sessions/${session.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            bookId: book.id,
+            progressType,
+            progressFrom,
+            progressTo,
+            impression,
+            quoteTexts: quotes,
+          }),
+        });
+        if (res.ok) onSaved?.(session.id, false);
+        else alert("保存に失敗しました");
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const addQuote = () => {
     if (newQuote.trim()) {
@@ -192,8 +235,8 @@ export function PaneSessionDetail({ book, session, isNew, onDelete }: PaneSessio
         </div>
 
         <div className="border-t px-4 py-3">
-          <Button size="sm" className="w-full">
-            {isNew ? "セッションを保存" : "保存"}
+          <Button size="sm" className="w-full" onClick={handleSave} disabled={saving || !book}>
+            {saving ? "保存中..." : isNew ? "セッションを保存" : "保存"}
           </Button>
         </div>
       </div>

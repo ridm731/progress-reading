@@ -7,7 +7,7 @@ import type { BookWithSessions, SessionWithQuotes, AIMode } from "@/lib/types";
 import { Sparkles, BookOpen, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type FeedbackStatus = "idle" | "loading" | "streaming" | "done" | "error" | "empty";
+type FeedbackStatus = "idle" | "loading" | "done" | "error" | "empty";
 
 interface PaneAiFeedbackProps {
   book:        BookWithSessions | null;
@@ -33,43 +33,60 @@ const modeConfig: Record<AIMode, { label: string; description: string; icon: Rea
   },
 };
 
-const MOCK_RESPONSES: Record<AIMode, string> = {
-  today: `今日もしっかり読み進めましたね！
-
-「より少なく、しかしより良く」という哲学を腑に落とせたということ、とても大事な気づきだと思います。私たちはついつい「もっとできる」「全部やらなきゃ」と思いがちですが、本質的な問いは「これは本当に必要か？」ですよね。
-
-次のセッションでは、具体的な実践方法に入っていくはず。楽しみに読み進めてみてください！`,
-  recap: `**ここまでの読書まとめ**
-
-序章から始まり、忙しさを美徳とする現代文化への批判、トレードオフの重要性、そして「正しいことをこなす」思考法へと展開しています。
-
-あなたは特に「忙しさへの批判」と「トレードオフの意識」に共鳴しているようですね。この気づきをぜひ日常に活かしてみてください。`,
-  review: `（本を読み終えてから使える機能です）
-
-読了後、この本のどんな言葉や考えが最も自分の中に残りましたか？全セッションの感想と引用を振り返りながら、あなただけの「この本の総評」を一緒に作りましょう。`,
-};
-
 export function PaneAiFeedback({ book, session, allSessions }: PaneAiFeedbackProps) {
   const [mode,     setMode]     = useState<AIMode>("today");
   const [status,   setStatus]   = useState<FeedbackStatus>("idle");
-  const [response, setResponse] = useState("");
+  const [response, setResponse] = useState(() => {
+    // セッションに保存済みの today フィードバックを初期表示
+    return "";
+  });
 
   const handleRequest = async () => {
     if (allSessions.length === 0) {
       setStatus("empty");
       return;
     }
+    if (mode === "today" && !session) return;
+
     setStatus("loading");
     setResponse("");
-    await new Promise((r) => setTimeout(r, 1200));
-    setStatus("done");
-    setResponse(MOCK_RESPONSES[mode]);
+
+    const sessionId = mode === "today" ? session!.id : "book";
+
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/ai-feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode,
+          impression:      session?.impression ?? null,
+          quotes:          session?.quotes.map((q) => q.text) ?? [],
+          allImpressions:  allSessions.map((s) => s.impression ?? "").filter(Boolean),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.text) {
+        setResponse(data.text);
+        setStatus("done");
+      } else {
+        setStatus("error");
+      }
+    } catch {
+      setStatus("error");
+    }
   };
 
   const handleModeChange = (newMode: AIMode) => {
     setMode(newMode);
     setStatus("idle");
-    setResponse("");
+    // today モードに切り替えた際、保存済みフィードバックがあれば表示
+    if (newMode === "today" && session?.aiFeedback) {
+      setResponse(session.aiFeedback);
+      setStatus("done");
+    } else {
+      setResponse("");
+    }
   };
 
   if (!book) {
@@ -121,12 +138,12 @@ export function PaneAiFeedback({ book, session, allSessions }: PaneAiFeedbackPro
       <div className="px-4 py-3">
         <Button
           onClick={handleRequest}
-          disabled={status === "loading" || status === "streaming" || !canRequest}
+          disabled={status === "loading" || !canRequest}
           className="w-full"
           size="sm"
         >
-          <Sparkles className={cn("mr-2 h-4 w-4", (status === "loading" || status === "streaming") && "animate-pulse")} />
-          {status === "loading" || status === "streaming" ? "生成中..." : modeConfig[mode].label}
+          <Sparkles className={cn("mr-2 h-4 w-4", status === "loading" && "animate-pulse")} />
+          {status === "loading" ? "生成中..." : modeConfig[mode].label}
         </Button>
         {mode === "today" && !session && (
           <p className="mt-1.5 text-center text-xs text-muted-foreground">

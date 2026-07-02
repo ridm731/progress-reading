@@ -81,6 +81,7 @@ export const readingSessions = pgTable("reading_sessions", {
   progressTo:   numeric("progress_to",   { precision: 8, scale: 2 }),
   progressNote: text("progress_note"),
   impression:   text("impression"),
+  aiFeedback:   text("ai_feedback"),
   createdAt:    timestamp("created_at").defaultNow().notNull(),
 });
 

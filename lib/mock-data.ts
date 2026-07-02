@@ -26,6 +26,7 @@ export const MOCK_BOOKS: BookWithSessions[] = [
         progressNote: null,
         impression:
           "「より少なく、しかしより良く」という哲学が腑に落ちた。何かを選ぶことは、他の何かを捨てることだという当たり前の事実を改めて意識させられる。",
+        aiFeedback: null,
         createdAt: new Date("2026-07-01"),
         quotes: [
           {
@@ -49,6 +50,7 @@ export const MOCK_BOOKS: BookWithSessions[] = [
         progressNote: null,
         impression:
           "トレードオフを意識することの重要性を学んだ。全てを「イエス」と言うことは、実は何も選んでいないのと同じだという視点が新鮮だった。",
+        aiFeedback: null,
         createdAt: new Date("2026-06-28"),
         quotes: [
           {
@@ -72,6 +74,7 @@ export const MOCK_BOOKS: BookWithSessions[] = [
         progressNote: null,
         impression:
           "序章から引き込まれた。忙しさを美徳とする現代文化への批判は痛烈で、自分自身の働き方を振り返るきっかけになった。",
+        aiFeedback: null,
         createdAt: new Date("2026-06-25"),
         quotes: [],
       },
@@ -101,6 +104,7 @@ export const MOCK_BOOKS: BookWithSessions[] = [
         progressTo: "100",
         progressNote: null,
         impression: "後半の実践パートが特に良かった。深い集中のためのルーティン設計を試してみたい。",
+        aiFeedback: null,
         createdAt: new Date("2026-06-15"),
         quotes: [
           {

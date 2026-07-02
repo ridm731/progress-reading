@@ -29,8 +29,9 @@ type WorkspaceAction =
   | { type: "SELECT_SESSION";  sessionId: string }
   | { type: "NEW_SESSION" }
   | { type: "SET_PANE3_TAB";  tab: Pane3Tab }
-  | { type: "ADD_BOOK";       book: BookWithSessions }
-  | { type: "DELETE_SESSION"; sessionId: string };
+  | { type: "ADD_BOOK";        book: BookWithSessions }
+  | { type: "DELETE_SESSION";  sessionId: string }
+  | { type: "SESSION_SAVED";   sessionId: string };
 
 function reducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
   switch (action.type) {
@@ -52,6 +53,8 @@ function reducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState
       );
       return { ...state, books, selectedSessionId: null, isNewSession: false };
     }
+    case "SESSION_SAVED":
+      return { ...state, selectedSessionId: action.sessionId, isNewSession: false };
     default:
       return state;
   }
@@ -175,6 +178,7 @@ export function ReadingWorkspace({ initialBooks }: ReadingWorkspaceProps) {
                 session={state.isNewSession ? null : selectedSession}
                 isNew={state.isNewSession}
                 onDelete={(id) => dispatch({ type: "DELETE_SESSION", sessionId: id })}
+                onSaved={(id) => dispatch({ type: "SESSION_SAVED", sessionId: id })}
               />
             ) : (
               <PaneAiFeedback
@@ -245,6 +249,7 @@ export function ReadingWorkspace({ initialBooks }: ReadingWorkspaceProps) {
               session={state.isNewSession ? null : selectedSession}
               isNew={state.isNewSession}
               onDelete={(id) => dispatch({ type: "DELETE_SESSION", sessionId: id })}
+              onSaved={(id) => dispatch({ type: "SESSION_SAVED", sessionId: id })}
             />
           )}
           {mobilePane === "ai" && (
