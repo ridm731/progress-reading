@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
-import { auth } from "@/auth";
+import { getCurrentUserId } from "@/lib/current-user";
 import { db } from "@/db/client";
 import { books } from "@/db/schema";
 
@@ -9,8 +9,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getCurrentUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -59,7 +59,7 @@ export async function PATCH(
     const [book] = await db
       .update(books)
       .set(patch)
-      .where(and(eq(books.id, id), eq(books.userId, session.user.id)))
+      .where(and(eq(books.id, id), eq(books.userId, userId)))
       .returning();
 
     if (!book) {
@@ -78,8 +78,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getCurrentUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -87,7 +87,7 @@ export async function DELETE(
     // reading_sessions / quotes は ON DELETE CASCADE で一緒に消える
     const [deleted] = await db
       .delete(books)
-      .where(and(eq(books.id, id), eq(books.userId, session.user.id)))
+      .where(and(eq(books.id, id), eq(books.userId, userId)))
       .returning({ id: books.id });
 
     if (!deleted) {

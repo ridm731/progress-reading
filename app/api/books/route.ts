@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { getCurrentUserId } from "@/lib/current-user";
 import { db } from "@/db/client";
 import { books } from "@/db/schema";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getCurrentUserId();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     const [book] = await db
       .insert(books)
       .values({
-        userId:     session.user.id,
+        userId,
         title,
         author,
         medium:     medium ?? "paper",
