@@ -7,6 +7,7 @@ import { PaneSessions } from "@/components/pane-sessions";
 import { PaneSessionDetail } from "@/components/pane-session-detail";
 import { PaneAiFeedback } from "@/components/pane-ai-feedback";
 import { AddBookDialog } from "@/components/AddBookDialog";
+import { EditBookDialog } from "@/components/EditBookDialog";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { BookWithSessions, SessionWithQuotes } from "@/lib/types";
@@ -34,7 +35,8 @@ type WorkspaceAction =
   | { type: "SESSION_SAVED";   session: SessionWithQuotes; bookPatch?: { status: BookWithSessions["status"]; startedAt: string | null } | null }
   | { type: "AI_FEEDBACK_SAVED"; sessionId: string; text: string }
   | { type: "BOOK_AI_SAVED"; bookId: string; mode: "recap" | "review"; text: string; generatedAt: string | null }
-  | { type: "BOOK_UPDATED"; bookId: string; patch: { status: BookWithSessions["status"]; finishedAt: string | null } };
+  | { type: "BOOK_UPDATED"; bookId: string; patch: Partial<Pick<BookWithSessions, "title" | "author" | "medium" | "totalPages" | "status" | "finishedAt">> }
+  | { type: "BOOK_DELETED"; bookId: string };
 
 function reducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
   switch (action.type) {
@@ -96,6 +98,19 @@ function reducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState
       );
       return { ...state, books };
     }
+    case "BOOK_DELETED": {
+      const books = state.books.filter((b) => b.id !== action.bookId);
+      if (state.selectedBookId !== action.bookId) return { ...state, books };
+      const next = books[0] ?? null;
+      return {
+        ...state,
+        books,
+        selectedBookId:    next?.id ?? null,
+        selectedSessionId: next?.sessions[0]?.id ?? null,
+        isNewSession:      false,
+        pane3Tab:          "detail",
+      };
+    }
     default:
       return state;
   }
@@ -121,7 +136,8 @@ export function ReadingWorkspace({ initialBooks }: ReadingWorkspaceProps) {
     pane3Tab:          "detail",
   });
 
-  const [showAddBook, setShowAddBook] = useState(false);
+  const [showAddBook, setShowAddBook]   = useState(false);
+  const [showEditBook, setShowEditBook] = useState(false);
 
   const selectedBook    = state.books.find((b) => b.id === state.selectedBookId) ?? null;
   const bookSessions    = (selectedBook?.sessions ?? []) as SessionWithQuotes[];
@@ -192,6 +208,7 @@ export function ReadingWorkspace({ initialBooks }: ReadingWorkspaceProps) {
             onNewSession={() => dispatch({ type: "NEW_SESSION" })}
             onRequestAI={handleRequestAI}
             onBookUpdated={(bookId, patch) => dispatch({ type: "BOOK_UPDATED", bookId, patch })}
+            onEditBook={() => setShowEditBook(true)}
           />
         </div>
 
@@ -291,7 +308,8 @@ export function ReadingWorkspace({ initialBooks }: ReadingWorkspaceProps) {
               onSelectSession={handleSelectSession}
               onNewSession={handleNewSession}
               onRequestAI={handleRequestAI}
-            onBookUpdated={(bookId, patch) => dispatch({ type: "BOOK_UPDATED", bookId, patch })}
+              onBookUpdated={(bookId, patch) => dispatch({ type: "BOOK_UPDATED", bookId, patch })}
+              onEditBook={() => setShowEditBook(true)}
             />
           </div>
           <div className={mobilePane === "detail" ? "h-full" : "hidden"}>
@@ -324,6 +342,19 @@ export function ReadingWorkspace({ initialBooks }: ReadingWorkspaceProps) {
         onClose={() => setShowAddBook(false)}
         onAdd={(book) => dispatch({ type: "ADD_BOOK", book })}
       />
+
+      {/* 開くたびに選択中の本で初期化したいので open 時のみマウント */}
+      {showEditBook && selectedBook && (
+        <EditBookDialog
+          book={selectedBook}
+          onClose={() => setShowEditBook(false)}
+          onUpdated={(bookId, patch) => dispatch({ type: "BOOK_UPDATED", bookId, patch })}
+          onDeleted={(bookId) => {
+            dispatch({ type: "BOOK_DELETED", bookId });
+            setMobilePane("bookshelf");
+          }}
+        />
+      )}
     </>
   );
 }

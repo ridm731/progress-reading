@@ -6,7 +6,7 @@ import { ja } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { BookStatus, BookWithSessions, SessionWithQuotes } from "@/lib/types";
-import { Check, Plus, Sparkles } from "lucide-react";
+import { Check, Pencil, Plus, Sparkles } from "lucide-react";
 
 interface PaneSessionsProps {
   book:              BookWithSessions | null;
@@ -16,6 +16,7 @@ interface PaneSessionsProps {
   onNewSession:      () => void;
   onRequestAI?:      () => void;
   onBookUpdated?:    (bookId: string, patch: { status: BookStatus; finishedAt: string | null }) => void;
+  onEditBook?:       () => void;
 }
 
 function formatProgress(session: SessionWithQuotes): string {
@@ -41,6 +42,7 @@ export function PaneSessions({
   onNewSession,
   onRequestAI,
   onBookUpdated,
+  onEditBook,
 }: PaneSessionsProps) {
   const [summaryExpanded, setSummaryExpanded] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -110,13 +112,24 @@ export function PaneSessions({
             </div>
           )}
         </div>
-        <button
-          onClick={onNewSession}
-          className="ml-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-md hover:bg-accent"
-          title="セッションを追加"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
+        <div className="ml-2 flex shrink-0 items-center gap-0.5">
+          {onEditBook && (
+            <button
+              onClick={onEditBook}
+              className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent"
+              title="本の情報を編集"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+          )}
+          <button
+            onClick={onNewSession}
+            className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent"
+            title="セッションを追加"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* 前回のまとめ */}

@@ -16,15 +16,49 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await req.json();
-    const { status, finishedAt } = body;
+    const { title, author, medium, totalPages, status, finishedAt } = body;
 
-    if (!["reading", "done", "want_to_read"].includes(status)) {
-      return NextResponse.json({ error: "invalid status" }, { status: 400 });
+    const patch: Partial<typeof books.$inferInsert> = {};
+
+    if (title !== undefined) {
+      if (typeof title !== "string" || !title.trim()) {
+        return NextResponse.json({ error: "invalid title" }, { status: 400 });
+      }
+      patch.title = title.trim();
+    }
+    if (author !== undefined) {
+      if (typeof author !== "string" || !author.trim()) {
+        return NextResponse.json({ error: "invalid author" }, { status: 400 });
+      }
+      patch.author = author.trim();
+    }
+    if (medium !== undefined) {
+      if (!["paper", "kindle"].includes(medium)) {
+        return NextResponse.json({ error: "invalid medium" }, { status: 400 });
+      }
+      patch.medium = medium;
+    }
+    if (totalPages !== undefined) {
+      if (totalPages !== null && (!Number.isInteger(totalPages) || totalPages < 1)) {
+        return NextResponse.json({ error: "invalid totalPages" }, { status: 400 });
+      }
+      patch.totalPages = totalPages;
+    }
+    if (status !== undefined) {
+      if (!["reading", "done", "want_to_read"].includes(status)) {
+        return NextResponse.json({ error: "invalid status" }, { status: 400 });
+      }
+      patch.status = status;
+      patch.finishedAt = finishedAt ?? null;
+    }
+
+    if (Object.keys(patch).length === 0) {
+      return NextResponse.json({ error: "no fields to update" }, { status: 400 });
     }
 
     const [book] = await db
       .update(books)
-      .set({ status, finishedAt: finishedAt ?? null })
+      .set(patch)
       .where(and(eq(books.id, id), eq(books.userId, session.user.id)))
       .returning();
 
@@ -33,6 +67,34 @@ export async function PATCH(
     }
 
     return NextResponse.json({ success: true, book });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+    // reading_sessions / quotes は ON DELETE CASCADE で一緒に消える
+    const [deleted] = await db
+      .delete(books)
+      .where(and(eq(books.id, id), eq(books.userId, session.user.id)))
+      .returning({ id: books.id });
+
+    if (!deleted) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
