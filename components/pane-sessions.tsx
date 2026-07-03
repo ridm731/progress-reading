@@ -5,8 +5,8 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { BookWithSessions, SessionWithQuotes } from "@/lib/types";
-import { Plus, Sparkles } from "lucide-react";
+import type { BookStatus, BookWithSessions, SessionWithQuotes } from "@/lib/types";
+import { Check, Plus, Sparkles } from "lucide-react";
 
 interface PaneSessionsProps {
   book:              BookWithSessions | null;
@@ -15,6 +15,7 @@ interface PaneSessionsProps {
   onSelectSession:   (id: string) => void;
   onNewSession:      () => void;
   onRequestAI?:      () => void;
+  onBookUpdated?:    (bookId: string, patch: { status: BookStatus; finishedAt: string | null }) => void;
 }
 
 function formatProgress(session: SessionWithQuotes): string {
@@ -39,8 +40,27 @@ export function PaneSessions({
   onSelectSession,
   onNewSession,
   onRequestAI,
+  onBookUpdated,
 }: PaneSessionsProps) {
   const [summaryExpanded, setSummaryExpanded] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  const handleStatusChange = async (status: BookStatus) => {
+    if (!book) return;
+    setUpdatingStatus(true);
+    try {
+      const finishedAt = status === "done" ? format(new Date(), "yyyy-MM-dd") : null;
+      const res = await fetch(`/api/books/${book.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, finishedAt }),
+      });
+      if (res.ok) onBookUpdated?.(book.id, { status, finishedAt });
+      else alert("更新に失敗しました");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   if (!book) {
     return (
@@ -63,6 +83,32 @@ export function PaneSessions({
             <span className="shrink-0">📘</span>{book.title}
           </h2>
           <p className="text-xs text-muted-foreground">{book.author}</p>
+          {book.status === "reading" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-1.5 h-6 text-xs"
+              disabled={updatingStatus}
+              onClick={() => handleStatusChange("done")}
+            >
+              <Check className="mr-1 h-3.5 w-3.5" />
+              {updatingStatus ? "更新中..." : "読了にする"}
+            </Button>
+          )}
+          {book.status === "done" && (
+            <div className="mt-1.5 flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">
+                ✅ {book.finishedAt ? `${format(new Date(book.finishedAt), "M/d", { locale: ja })} ` : ""}読了
+              </span>
+              <button
+                className="text-xs text-muted-foreground underline-offset-2 hover:underline disabled:opacity-50"
+                disabled={updatingStatus}
+                onClick={() => handleStatusChange("reading")}
+              >
+                読書中に戻す
+              </button>
+            </div>
+          )}
         </div>
         <button
           onClick={onNewSession}

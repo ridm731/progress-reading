@@ -33,7 +33,8 @@ type WorkspaceAction =
   | { type: "DELETE_SESSION";  sessionId: string }
   | { type: "SESSION_SAVED";   session: SessionWithQuotes; bookPatch?: { status: BookWithSessions["status"]; startedAt: string | null } | null }
   | { type: "AI_FEEDBACK_SAVED"; sessionId: string; text: string }
-  | { type: "BOOK_AI_SAVED"; bookId: string; mode: "recap" | "review"; text: string; generatedAt: string | null };
+  | { type: "BOOK_AI_SAVED"; bookId: string; mode: "recap" | "review"; text: string; generatedAt: string | null }
+  | { type: "BOOK_UPDATED"; bookId: string; patch: { status: BookWithSessions["status"]; finishedAt: string | null } };
 
 function reducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
   switch (action.type) {
@@ -87,6 +88,12 @@ function reducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState
           ? { ...b, aiRecap: action.text, aiRecapGeneratedAt: action.generatedAt ? new Date(action.generatedAt) : new Date() }
           : { ...b, aiReview: action.text };
       });
+      return { ...state, books };
+    }
+    case "BOOK_UPDATED": {
+      const books = state.books.map((b) =>
+        b.id === action.bookId ? { ...b, ...action.patch } : b,
+      );
       return { ...state, books };
     }
     default:
@@ -184,6 +191,7 @@ export function ReadingWorkspace({ initialBooks }: ReadingWorkspaceProps) {
             onSelectSession={(id) => dispatch({ type: "SELECT_SESSION", sessionId: id })}
             onNewSession={() => dispatch({ type: "NEW_SESSION" })}
             onRequestAI={handleRequestAI}
+            onBookUpdated={(bookId, patch) => dispatch({ type: "BOOK_UPDATED", bookId, patch })}
           />
         </div>
 
@@ -283,6 +291,7 @@ export function ReadingWorkspace({ initialBooks }: ReadingWorkspaceProps) {
               onSelectSession={handleSelectSession}
               onNewSession={handleNewSession}
               onRequestAI={handleRequestAI}
+            onBookUpdated={(bookId, patch) => dispatch({ type: "BOOK_UPDATED", bookId, patch })}
             />
           </div>
           <div className={mobilePane === "detail" ? "h-full" : "hidden"}>
