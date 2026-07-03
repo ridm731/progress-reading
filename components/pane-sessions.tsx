@@ -176,13 +176,14 @@ export function PaneSessions({
         ) : (
           sorted.map((session) => {
             const progress = formatProgress(session);
+            const isSelected = selectedSessionId === session.id;
             return (
               <button
                 key={session.id}
                 onClick={() => onSelectSession(session.id)}
                 className={cn(
-                  "w-full rounded-md px-3 py-2 text-left transition-colors hover:bg-accent",
-                  selectedSessionId === session.id && "bg-accent",
+                  "w-full rounded-md px-3 py-2 text-left transition-colors hover:bg-primary/10 hover:text-primary",
+                  isSelected && "bg-primary/15 text-primary",
                 )}
               >
                 <div className="flex items-baseline justify-between gap-2">
@@ -190,11 +191,13 @@ export function PaneSessions({
                     {format(new Date(session.sessionDate), "M/d（EEE）", { locale: ja })}
                   </span>
                   {progress && (
-                    <span className="shrink-0 text-xs text-muted-foreground">{progress}</span>
+                    <span className={cn("shrink-0 text-xs", isSelected ? "text-primary/70" : "text-muted-foreground")}>
+                      {progress}
+                    </span>
                   )}
                 </div>
                 {session.impression && (
-                  <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+                  <p className={cn("mt-0.5 line-clamp-1 text-xs", isSelected ? "text-primary/70" : "text-muted-foreground")}>
                     {session.impression}
                   </p>
                 )}
