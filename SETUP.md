@@ -15,7 +15,7 @@
 ## 手順1: コードの取得と依存関係のインストール
 
 ```bash
-git clone <このリポジトリのURL>
+git clone https://github.com/ridm731/progress-reading.git
 cd progress-reading
 npm install
 cp .env.example .env.local
